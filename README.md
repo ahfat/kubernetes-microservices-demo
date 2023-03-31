@@ -26,14 +26,30 @@ Remarks of parameters
 - `nodes`: default 2 nodes
 - `node-type`: EC2 machine type, default is m5.large
 
-It will take 10 - 15 minutes to complete the process.
+It will take 10 - 15 minutes to complete the process. Last, you will see
 
-[Todo: insert image of dashboard and command screen when it is ready]
+`EKS cluster "<cluster name>" in "<aws region>" region is ready`
+
+![Create cluster](images/create-cluster.png)
 
 ## 1.3 Verify VPC, Nodes
-[Todo: insert image of dashboard and command screen when it is ready]
+You can then verfiy the status of the cluster just created. "ACTIVE" should be responsed after running the following command.
 
-![test image](images/test.png)
+`aws eks describe-cluster --name <cluster name> --query cluster.status`
+
+Example
+
+`aws eks describe-cluster --name boutique-online --query cluster.status`
+
+![Cluster Status CLI](images/cluster-status-cli.png)
+
+Then review the status of the kubernetes system pods
+
+`kubectl get pods -n kube-system`
+
+[Todo: insert image of dashboard and command screen when it is ready] CLI
+
+You should notice aws-node, coredns and kube-proxy pods are in `RUNNING` state
 
 ## 1.4 Create Namespace
 After verification, you can create a namespace for the deployment.
@@ -55,7 +71,7 @@ Example
 
 It will take 5 - 10 minutes to complete the deployment.
 
-## 1.6 Review the deployment Status and frontend external URL
+## 1.6 Review the deployment status and frontend external URL
 When deployment is completed, you can review the status of pods and services using the following commands.
 
 **Check the status of Pods**
@@ -101,7 +117,5 @@ Example
 `kubectl delete -f kubernetes-manifests.yaml -n boutique-online`
 
 `eksctl delete cluster --name boutique-online --region ap-southeast-1`
-
-[Todo: insert sample images]
 
 # 2. Use Locust tool to perform load test
