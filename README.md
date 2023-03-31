@@ -35,7 +35,7 @@ It will take 10 - 15 minutes to complete the process. Last, you will see
 ## 1.3 Verify VPC, Nodes
 You can then verfiy the status of the cluster just created. "ACTIVE" should be responsed after running the following command.
 
-`aws eks describe-cluster --name <cluster name> --query cluster.status`
+*Note: All the following commands, example parameters will be used.*
 
 Example
 
@@ -47,14 +47,12 @@ Then review the status of the kubernetes system pods
 
 `kubectl get pods -n kube-system`
 
-[Todo: insert image of dashboard and command screen when it is ready] CLI
+![Cluster Status CLI](images/cluster-status-cli2.png)
 
-You should notice aws-node, coredns and kube-proxy pods are in `RUNNING` state
+You should notice aws-node and kube-proxy pods are in `RUNNING` state
 
 ## 1.4 Create Namespace
 After verification, you can create a namespace for the deployment.
-
-`kubectl create namespace <namespace>`
 
 Example
 
@@ -62,8 +60,6 @@ Example
 
 ## 1.5 Deploy to EKS
 Ensure the repository is cloned, change to the `microservices-demo` directory, run the following command for deployment.
-
-`kubectl apply -f release/kubernetes-manifests.yaml -n <namespace>`
 
 Example
 
@@ -76,41 +72,36 @@ When deployment is completed, you can review the status of pods and services usi
 
 **Check the status of Pods**
 
-`kubectl get pods -n <namespace>`
+If all pods are ready, the application is ready for test.
 
 Example
 
 `kubectl get pods -n boutique-online`
 
-[Todo: insert sample images]
+![Deploy pods status](images/deploy-pods-status.png)
 
 **Check the status of Services**
-
-`kubectl get services -n <namespace>`
 
 Example
 
 `kubectl get services -n boutique-online`
 
-[Todo: insert sample images]
+![Deploy services status](images/deploy-services-status.png)
 
 **Retrieve the frontend external URL**
-
-`kubectl get svc frontend-external -n <namespace>`
 
 Example
 
 `kubectl get svc frontend-external -n boutique-online`
 
-[Todo: insert sample images]
+![Frontend external IP](images/frontend-external-ip.png)
+
+The frontend-external URL is [ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com](ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com). You can access the URL via a web browser to test the website.
+
 ## 1.7 Clean up the deployment and related resources
 Lastly, when all deployment and tests are finished, you can clean up the resources accordingly.
 
 First delete the deployment, then delete the cluster. All related resources will be deleted.
-
-`kubectl delete -f kubernetes-manifests.yaml -n <namespace>`
-
-`eksctl delete cluster --name <namespace> --region <aws region>`
 
 Example
 
