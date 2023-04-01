@@ -1,5 +1,5 @@
 # kubernetes-microservices-demo (draft)
-This page gives a guide for deploying a microservices demo project (<https://github.com/GoogleCloudPlatform/microservices-demo>) to AWS EKS. The original deployment target is Google Kubernetes Engine (GKE). This guide consists two parts,
+This page gives a guide for deploying a microservices demo project (<https://github.com/GoogleCloudPlatform/microservices-demo>) **Boutique Online** to AWS EKS. The original deployment target is Google Kubernetes Engine (GKE). This guide consists two parts,
 
 1. Deploy the [project](https://github.com/GoogleCloudPlatform/microservices-demo) to AWS EKS
 2. Use [Locust](https://locust.io/) tool to perform load test
@@ -20,7 +20,7 @@ Example
 
 `eksctl create cluster --name boutique-online --region ap-southeast-1 --version 1.25 --nodes 3 --node-type t2.small`
 
-Remarks of parameters
+Explanation of parameters
 - `name`: cluster name
 - `version`: support 1.22, 1.23, 1.24, 1.25
 - `nodes`: default 2 nodes
@@ -49,10 +49,10 @@ Then review the status of the kubernetes system pods
 
 ![Cluster Status CLI](images/cluster-status-cli2.png)
 
-You should notice aws-node and kube-proxy pods are in `RUNNING` state
+You should notice **aws-node** and **kube-proxy** pods are in `RUNNING` state
 
 ## 1.4 Create Namespace
-After verification, you can create a namespace for the deployment.
+After verification, you can create a namespace called **boutique-online** for the deployment.
 
 Example
 
@@ -110,3 +110,47 @@ Example
 `eksctl delete cluster --name boutique-online --region ap-southeast-1`
 
 # 2. Use Locust tool to perform load test
+This part is about using Locust tool to simulate user behaviours on the **Boutique Online** website with defined workload parameters and actions.
+
+## 2.1 Simulation Parameters
+
+The testing parameters is defined in the python script file [locustfile.py](scripts/locustfile.py).
+
+### Simulation TaskSet
+The following block of codes define six tasks simulating six user actions with weights assigned as illustrated below. Between each action, it will wait between 1 and 10 seconds.
+
+```
+class UserBehavior(TaskSet):
+
+    def on_start(self):
+        index(self)
+
+    tasks = {index: 1,
+        setCurrency: 2,
+        browseProduct: 10,
+        addToCart: 2,
+        viewCart: 3,
+        checkout: 1}
+
+class WebsiteUser(HttpUser):
+    tasks = [UserBehavior]
+    wait_time = between(1, 10)
+```
+
+| Task | Action | Weight |
+| --- |--- | :---: |
+| index | Access the index page | 1 |
+| setCurrency | Set the currency for the shop randomly | 2 |
+| browseProduct | Browse a product randomly | 10 |
+| addToCart | Add a product to the shopping cart with a random quantity | 2 |
+| viewCart | View the shopping cart | 3 |
+| checkout | Checkout the shopping cart | 1 |
+
+### Number of users
+The number of users and user spawn rate can be defined when you start the test either via web UI or command line.
+
+[Todo: add UI image]
+
+The above example simulates 1000 users and spawning 1 user per second.
+
+## 2.2 Test Results
