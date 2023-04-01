@@ -33,7 +33,7 @@ It will take 10 - 15 minutes to complete the process. Last, you will see
 ![Create cluster](images/create-cluster.png)
 
 ## 1.3 Verify VPC, Nodes
-You can then verfiy the status of the cluster just created. "ACTIVE" should be responsed after running the following command.
+You can then verfiy the status of the cluster just created. `"ACTIVE"` should be responsed after running the following command.
 
 *Note: All the following commands, example parameters will be used.*
 
@@ -149,8 +149,33 @@ class WebsiteUser(HttpUser):
 ### Number of users
 The number of users and user spawn rate can be defined when you start the test either via web UI or command line.
 
-[Todo: add UI image]
+![Locust UI](images/locust-ui.png)
 
-The above example simulates 1000 users and spawning 1 user per second.
+The above example simulates 1000 users and spawning one user per second.
 
 ## 2.2 Test Results
+As mentioned previously, the test starts from one user. Every second, one user is added. Each user performs the taskset discussed in previous section independently. Until 1000 users are running in parallel for around one minute, the test stops. The following tables and charts are captured from the Locust web UI and AWS dashboard.
+
+### Tables of statistics
+The **Request Statistics** table shows individual request and its general metrics.
+
+![Request statistics](images/request-statistics.png)
+
+The **Response Time Statistics** table focuses mainly on the response time categorised by percentile.
+
+![Response time statistics](images/response-time-statistics.png)
+
+### Charts results
+The following three charts show the results of **Total Request per Second**, **Response Time** and **Number of Users** versus time respectively.
+
+![Chart results](images/chart-results.png)
+
+### cluster and node metrics
+
+### findings
+
+## 2.3 Testing Machines
+| Role | Machine | Specifications |
+| --- | --- | --- |
+| Boutique Application | AWS EKS Cluster | 3 nodes of t2.small machine, 1 vCPU, 2GB RAM |
+| Test loader | MacBook Pro | Apple M1 CPU, 8GB RAM |
