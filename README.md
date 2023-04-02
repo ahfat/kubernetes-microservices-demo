@@ -1,4 +1,4 @@
-# kubernetes-microservices-demo (draft)
+# kubernetes-microservices-demo
 This page gives a guide for deploying a microservices demo project (<https://github.com/GoogleCloudPlatform/microservices-demo>) **Boutique Online** to AWS EKS. The original deployment target is Google Kubernetes Engine (GKE). This guide consists two parts,
 
 1. Deploy the [project](https://github.com/GoogleCloudPlatform/microservices-demo) to AWS EKS
@@ -110,7 +110,7 @@ Example
 `eksctl delete cluster --name boutique-online --region ap-southeast-1`
 
 # 2. Use Locust tool to perform load test
-This part is about using Locust tool to simulate user behaviours on the **Boutique Online** website with defined workload parameters and actions.
+This part is about using Locust tool to simulate user behaviours on the **Boutique Online** website with defined workload parameters and tasks.
 
 ## 2.1 Simulation Parameters
 
@@ -140,24 +140,24 @@ class WebsiteUser(HttpUser):
 | Task | Action | Weight |
 | --- |--- | :---: |
 | index | Access the index page | 1 |
-| setCurrency | Set the currency for the shop randomly | 2 |
-| browseProduct | Browse a product randomly | 10 |
-| addToCart | Add a product to the shopping cart with a random quantity | 2 |
+| setCurrency | Set the currency for the shop randomly from 1 of the 4 currencies in the list | 2 |
+| browseProduct | Browse a product randomly from 1 of the 9 products in the list | 10 |
+| addToCart | Add a product to the shopping cart with a random quantity (1, 2, 3, 4, 5 or 10) | 2 |
 | viewCart | View the shopping cart | 3 |
-| checkout | Checkout the shopping cart | 1 |
+| checkout | Checkout the shopping cart by providing dummy information | 1 |
 
 ### Number of users
 The number of users and user spawn rate can be defined when you start the test either via web UI or command line.
 
 ![Locust UI](images/locust-ui.png)
 
-The above example simulates 1000 users and spawning one user per second.
+The above example simulates 1000 users and spawning one user per second. The host is the **frontend-external URL** retrieved in part 1.
 
 ## 2.2 Test Results
-As mentioned previously, the test starts from one user. Every second, one user is added. Each user performs the taskset discussed in previous section independently. Until 1000 users are running in parallel for around one minute, the test stops. The following tables and charts are captured from the Locust web UI and AWS dashboard.
+As mentioned previously, the test started from one user, one user was added in every second. Each user performed the taskset discussed in the previous section independently. Until 1000 users were running in parallel for around one minute, the test stopped. The following tables and charts were captured from the Locust web UI and AWS dashboard.
 
 ### Tables of statistics
-The **Request Statistics** table shows individual request and its general metrics.
+The **Request Statistics** table shows individual request and its general metrics. There were totally 100727 requests made throughout the test without failture. However the response times varied between 37ms and 10099ms, which was a huge difference. Further study was required to have a more insightful comments. We will need to take **number of users** into consideration in the next section.
 
 ![Request statistics](images/request-statistics.png)
 
@@ -166,16 +166,63 @@ The **Response Time Statistics** table focuses mainly on the response time categ
 ![Response time statistics](images/response-time-statistics.png)
 
 ### Charts results
-The following three charts show the results of **Total Request per Second**, **Response Time** and **Number of Users** versus time respectively.
+The following three charts show the results of **Total Requests per Second**, **Response Times** and **Number of Users** versus time respectively.
 
-![Chart results](images/chart-results.png)
+It shows that when **Number of Users** was around 769, the **Total Requests per Second** reached to around 138 until the end of the test. This implies that the cluster cannot serve requests higher than 138 rps. Possible reasons will be discussed later.
 
-### cluster and node metrics
+![Chart total RPS](images/chart-total-rps.png)
 
-### findings
+The response time curves depicts a mild exponential rise of **Response Times** against **Number of Users** until the **Number of Users** reached the target 1000.
 
-## 2.3 Testing Machines
+![Chart response time](images/chart-response-time.png)
+
+The response time curves become flucating when the **Number of Users** reached 619.
+
+![Chart response time 2](images/chart-response-time2.png)
+
+![Chart number of users](images/chart-users.png)
+
+### Cluster Metrics
+In addtion to the restuls from Locust, CPU and network statistics of the three cluster nodes were also captured from AWS monitoring dashboard for references.
+
+*Notes: only consider the range between the red lines*
+
+During the test, the **CPU Utilization** rose up with the increase of the **Number of Users**.
+
+As each node hosts different pods of microservices, the CPU and network utilizations of different nodes were not with the same level but having similar trend.
+
+![EKS CPU](images/eks-cpu.png)
+
+![EKS CPU](images/eks-network.png)
+### Discussions
+As observed, the **Total Requests per Second** came to the peak value (around 138 rps) before the **Number of Users** was maximum at 1000. That means the cluster could not serve more than 138 rps.
+
+Generally, there are four possible reasons for this limitation.
+
+1. Low CPU power
+2. Low disk I/O rate
+3. Low Memory I/O rate
+4. Low network bandwidth
+
+From the statistics we got, #1 could be eliminated as the CPU utilization is at 44.7% maximum for the busiest node. #2 and #3 could not be the reasons neither, as the data volume is low and only kept in Redis memory cache.
+
+The most sensible reason is #4 low network bandwidth. The cluster nodes are built from EC2 t2.small machine, its baseline network bandwidth is 128Mbps. From the network utilization charts shown above, it is noticed that the network I/O bandwidth of the green line could exceeds the bandwidth limit before 1000 users running together.
+
+Another observation is when the **Number of Users** reached 619, the **Response Times** became fluctuating. This was not an indication of good performance especially for a client facing application. The **Response Times** reached 460ms for 50th percentile of users. This can be further improved to enhance the user experience to meet the requirement of modern web applications.
+
+[AWS EC2 Reference](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/general-purpose-instances.html#general-purpose-network-performance)
+
+Another possible reason may come from the test loader machine running the Locust application. This test was conducted by a MacBook Pro, there were uncontrollable factors especially the network bandwidth under Wi-Fi connection was not stable.
+
+### Further Enhancement
+To further identify the limits of the cluster and the related environment, we could consider the following options to eliminate the network bandwidth constraint.
+- Use more powerful cluster nodes, such as t2.2xlarge or above having higher network bandwidth
+- Deploy the test loader into multiple machines on the cloud platform with (1) more stable network connection and (2) the traffic could be distributed rather than congesting on one machine
+
+By eliminating the network bandwidth limitation, we could narrow down the scope of issues and finally optimise the solution and architecture design such that response time and user expericence can be improved.
+
+## 2.3 Testing Environment
 | Role | Machine | Specifications |
 | --- | --- | --- |
-| Boutique Application | AWS EKS Cluster | 3 nodes of t2.small machine, 1 vCPU, 2GB RAM |
+| Boutique Web Application | AWS EKS Cluster | 3 nodes of t2.small machine, 1 vCPU, 2GB RAM |
 | Test loader | MacBook Pro | Apple M1 CPU, 8GB RAM |
