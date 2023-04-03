@@ -1,6 +1,9 @@
-# kubernetes-microservices-demo
-This page gives a guide for deploying a microservices demo project (<https://github.com/GoogleCloudPlatform/microservices-demo>) **Boutique Online** to AWS EKS. The original deployment target is Google Kubernetes Engine (GKE). This guide consists two parts,
+# Deploy and Test a Kubernetes Microservices Demo Project
+This page is a guide describing the deployment and testing of the microservices demo project **Boutique Online** to AWS EKS, where the original deployment target is Google Kubernetes Engine (GKE).
 
+Boutique Online project: <https://github.com/GoogleCloudPlatform/microservices-demo>
+
+This guide consists two parts,
 1. Deploy the [project](https://github.com/GoogleCloudPlatform/microservices-demo) to AWS EKS
 2. Use [Locust](https://locust.io/) tool to perform load test
 
@@ -33,11 +36,9 @@ It will take 10 - 15 minutes to complete the process. Last, you will see
 ![Create cluster](images/create-cluster.png)
 
 ## 1.3 Verify VPC, Nodes
-You can then verfiy the status of the cluster just created. `"ACTIVE"` should be responsed after running the following command.
+You can then verfiy the status of the cluster just created using the following command. It should return `"ACTIVE"`.
 
-*Note: All the following commands, example parameters will be used.*
-
-Example
+*Note: For all the commands in this guide, example parameters will be used.*
 
 `aws eks describe-cluster --name boutique-online --query cluster.status`
 
@@ -49,19 +50,15 @@ Then review the status of the kubernetes system pods
 
 ![Cluster Status CLI](images/cluster-status-cli2.png)
 
-You should notice **aws-node** and **kube-proxy** pods are in `RUNNING` state
+You should wait until **aws-node** and **kube-proxy** pods are in `Running` state
 
 ## 1.4 Create Namespace
 After verification, you can create a namespace called **boutique-online** for the deployment.
-
-Example
 
 `kubectl create namespace boutique-online`
 
 ## 1.5 Deploy to EKS
 Ensure the repository is cloned, change to the `microservices-demo` directory, run the following command for deployment.
-
-Example
 
 `kubectl apply -f release/kubernetes-manifests.yaml -n boutique-online`
 
@@ -74,15 +71,11 @@ When deployment is completed, you can review the status of pods and services usi
 
 If all pods are ready, the application is ready for test.
 
-Example
-
 `kubectl get pods -n boutique-online`
 
 ![Deploy pods status](images/deploy-pods-status.png)
 
 **Check the status of Services**
-
-Example
 
 `kubectl get services -n boutique-online`
 
@@ -90,20 +83,16 @@ Example
 
 **Retrieve the frontend external URL**
 
-Example
-
 `kubectl get svc frontend-external -n boutique-online`
 
 ![Frontend external IP](images/frontend-external-ip.png)
 
-The frontend-external URL is [ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com](ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com). You can access the URL via a web browser to test the website.
+The frontend-external URL is [ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com](ac8d5b2b5310745f2aee0d7ef40c1b88-1350472987.ap-southeast-1.elb.amazonaws.com). You can access the URL via a web browser to test the website. *(Remark: The above URL is only for this example, please retrieve and test your own URL)*
 
 ## 1.7 Clean up the deployment and related resources
 Lastly, when all deployment and tests are finished, you can clean up the resources accordingly.
 
 First delete the deployment, then delete the cluster. All related resources will be deleted.
-
-Example
 
 `kubectl delete -f kubernetes-manifests.yaml -n boutique-online`
 
@@ -137,6 +126,7 @@ class WebsiteUser(HttpUser):
     wait_time = between(1, 10)
 ```
 
+**TaskSet**
 | Task | Action | Weight |
 | --- |--- | :---: |
 | index | Access the index page | 1 |
@@ -154,10 +144,10 @@ The number of users and user spawn rate can be defined when you start the test e
 The above example simulates 1000 users and spawning one user per second. The host is the **frontend-external URL** retrieved in part 1.
 
 ## 2.2 Test Results
-As mentioned previously, the test started from one user, one user was added in every second. Each user performed the taskset discussed in the previous section independently. Until 1000 users were running in parallel for around one minute, the test stopped. The following tables and charts were captured from the Locust web UI and AWS dashboard.
+As mentioned previously, the test started from one user. In every second, one more user was added. Each user performed the taskset discussed in the previous section independently. Until 1000 users were running in parallel for around one minute, the test stopped. The following tables and charts were captured from the Locust web UI and AWS dashboard.
 
 ### Tables of statistics
-The **Request Statistics** table shows individual request and its general metrics. There were totally 100727 requests made throughout the test without failture. However the response times varied between 37ms and 10099ms, which was a huge difference. Further study was required to have a more insightful comments. We will need to take **number of users** into consideration in the next section.
+The **Request Statistics** table shows individual request and its general metrics. There were totally 100727 requests made throughout the test without failture. However the response times varied between 37ms and 10099ms, which was a huge difference. Further study was required to have a more insightful comments. We will take **number of users** into consideration in the next section.
 
 ![Request statistics](images/request-statistics.png)
 
@@ -208,11 +198,11 @@ From the statistics we got, #1 could be eliminated as the CPU utilization is at 
 
 The most sensible reason is #4 low network bandwidth. The cluster nodes are built from EC2 t2.small machine, its baseline network bandwidth is 128Mbps. From the network utilization charts shown above, it is noticed that the network I/O bandwidth of the green line could exceeds the bandwidth limit before 1000 users running together.
 
-Another observation is when the **Number of Users** reached 619, the **Response Times** became fluctuating. This was not an indication of good performance especially for a client facing application. The **Response Times** reached 460ms for 50th percentile of users. This can be further improved to enhance the user experience to meet the requirement of modern web applications.
+Another observation is when the **Number of Users** reached 619, the **Response Times** became fluctuating. This was not an indication of good performance especially for a client facing application. The **Response Times** also reached 460ms for 50th percentile of users. This can be further improved to enhance the user experience to meet the requirement of modern web applications.
 
 [AWS EC2 Reference](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/general-purpose-instances.html#general-purpose-network-performance)
 
-Another possible reason may come from the test loader machine running the Locust application. This test was conducted by a MacBook Pro, there were uncontrollable factors especially the network bandwidth under Wi-Fi connection was not stable.
+Another possible reason may come from the test loader machine running the Locust application. This test was conducted by a MacBook Pro, there were uncontrollable factors especially the instability of the network bandwidth under Wi-Fi connection.
 
 ### Further Enhancement
 To further identify the limits of the cluster and the related environment, we could consider the following options to eliminate the network bandwidth constraint.
